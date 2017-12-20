@@ -13,16 +13,18 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"     %%   "kamon-core"        % "1.0.0-RC7"
-val kamonTestkit      = "io.kamon"     %%   "kamon-testkit"     % "1.0.0-RC7"
-val scalazConcurrent  = "org.scalaz"   %%   "scalaz-concurrent" % "7.2.8"
+val kamonCore         = "io.kamon"               %%   "kamon-core"          % "1.0.0-RC7"
+val kamonTestkit      = "io.kamon"               %%   "kamon-testkit"       % "1.0.0-RC7"
+val scalazConcurrent  = "org.scalaz"             %%   "scalaz-concurrent"   % "7.2.8"
+val vavr              = "io.vavr"                 %   "vavr"                % "0.9.2"
+val scalaJava8Compat  = "org.scala-lang.modules" %%   "scala-java8-compat"  % "0.8.0"
 
 resolvers in ThisBuild += Resolver.bintrayRepo("kamon-io", "snapshots")
 
 lazy val `kamon-futures` = (project in file("."))
   .settings(name := "kamon-futures")
   .settings(noPublishing: _*)
-  .aggregate(`kamon-scala-future`, `kamon-twitter-future`, `kamon-scalaz-future`)
+  .aggregate(`kamon-scala-future`, `kamon-twitter-future`, `kamon-scalaz-future`, `kamon-vavr-future`)
 
 
 lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
@@ -53,6 +55,16 @@ lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
       compileScope(kamonCore) ++
         providedScope(aspectJ) ++
         optionalScope(scalazConcurrent, twitterDependency("core").value) ++
+        testScope(scalatest, kamonTestkit, logbackClassic))
+
+lazy val `kamon-vavr-future` = (project in file("kamon-vavr-future"))
+  .settings(bintrayPackage := "kamon-futures")
+  .settings(aspectJSettings: _*)
+  .settings(
+    libraryDependencies ++=
+      compileScope(kamonCore) ++
+        providedScope(aspectJ) ++
+        optionalScope(vavr, scalaJava8Compat) ++
         testScope(scalatest, kamonTestkit, logbackClassic))
 
 
