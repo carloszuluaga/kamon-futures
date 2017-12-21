@@ -24,8 +24,19 @@ import org.aspectj.lang.annotation._
 @Aspect
 class FutureInstrumentation {
 
-  @Pointcut("execution(* io.vavr.concurrent.Future.of(..))")
-  def sisas = println("sisas")
+  @DeclareMixin("kamon.vavr.instrumentation..* && kamon.vavr.instrumentation.Test$$Lambda*")
+  def mixinTrace: HasContext = {
+    println("DeclareMixin")
+    HasContext.fromCurrentContext()
+  }
+
+  @Pointcut("execution(* kamon.vavr.instrumentation.Test.lambda*(..)) && this(runnable)")
+  def sisas(runnable: HasContext) = println("sisas0")
+
+  @After("sisas(runnable)")
+  def afterSisas(runnable: HasContext): Unit = {
+    println("sisas1" + runnable.context.toString)
+  }
 
   @DeclareMixin("io.vavr.concurrent..* && java.lang.Runnable+")
   def mixinTraceContextAwareToFutureRelatedRunnable: HasContext = {

@@ -24,6 +24,8 @@ import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 
 import io.vavr.concurrent.Future
 
+import scala.compat.java8.functionConverterImpls._
+
 class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
   with OptionValues with ContextTesting {
 
@@ -40,6 +42,8 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
             Kamon.currentContext().get(StringKey)
           })
         }
+
+        Test.test()
 
         baggageInBody.await().get() should equal(Some("in-future-body"))
       }
