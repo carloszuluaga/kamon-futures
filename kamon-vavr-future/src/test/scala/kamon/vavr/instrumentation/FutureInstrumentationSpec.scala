@@ -21,7 +21,6 @@ import kamon.Kamon
 import kamon.testkit.ContextTesting
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-
 import io.vavr.concurrent.Future
 
 import scala.compat.java8.functionConverterImpls._
@@ -43,24 +42,24 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
           })
         }
 
-        Test.test()
-
         baggageInBody.await().get() should equal(Some("in-future-body"))
       }
 
       "must be available when executing callbacks on the future" in {
         val context = contextWithLocal("in-future-transformations")
-        val baggageAfterTransformations = Kamon.withContext(context) {
+        val baggageAfterTransformations: Future[Option[String]] = Kamon.withContext(context) {
+          val f: Future[String] = Future.of(() => {
+            "Hello Kamon!"
+          })
 
-          //Future.of(() ⇒ "Hello Kamon!")
-            // The active span is expected to be available during all intermediate processing.
-          //  .map(_.toString)
-          //  .flatMap(len ⇒ Future.of(() => len.toString))
-          //  .map(_ ⇒ Kamon.currentContext().get(StringKey))
-          //  .await()
+            f.map(x => x.toUpperCase())
+            .flatMap(len => Future.of(()=>len.toString))
+            .map(_ => Kamon.currentContext().get(StringKey))
         }
 
-        //baggageAfterTransformations.get() should equal(Some("in-future-transformations"))
+        baggageAfterTransformations.await().get() should equal(Some("in-future-transformations"))
+
+//        whenReady(baggageAfterTransformations)(baggageValue ⇒ baggageValue should equal(Some("in-future-transformations")))
       }
 
     }

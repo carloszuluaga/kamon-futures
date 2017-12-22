@@ -16,6 +16,9 @@
 
 package kamon.vavr.instrumentation
 
+import java.util.concurrent.ExecutorService
+
+import io.vavr.CheckedFunction0
 import kamon.Kamon
 import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
@@ -24,43 +27,26 @@ import org.aspectj.lang.annotation._
 @Aspect
 class FutureInstrumentation {
 
-  @DeclareMixin("kamon.vavr.instrumentation..* && kamon.vavr.instrumentation.Test$$Lambda*")
-  def mixinTrace: HasContext = {
-    println("DeclareMixin")
-    HasContext.fromCurrentContext()
-  }
+  @Pointcut("execution(* io.vavr.concurrent.Future.of(..)) && args(executor, computation)")
+  def runFuture(executor: ExecutorService, computation: CheckedFunction0[_]) = {}
 
-  @Pointcut("execution(* kamon.vavr.instrumentation.Test.lambda*(..)) && this(runnable)")
-  def sisas(runnable: HasContext) = println("sisas0")
-
-  @After("sisas(runnable)")
-  def afterSisas(runnable: HasContext): Unit = {
-    println("sisas1" + runnable.context.toString)
-  }
-
-  @DeclareMixin("io.vavr.concurrent..* && java.lang.Runnable+")
-  def mixinTraceContextAwareToFutureRelatedRunnable: HasContext = {
-    println("DeclareMixin")
-    HasContext.fromCurrentContext()
-  }
-
-  @Pointcut("execution((io.vavr.concurrent..* && java.lang.Runnable+).new(..)) && this(runnable)")
-  def futureRelatedRunnableCreation(runnable: HasContext): Unit = {}
-
-  @After("futureRelatedRunnableCreation(runnable)")
-  def afterCreation(runnable: HasContext): Unit = {
-    // Force traceContext initialization.
-    runnable.context
-  }
-
-  @Pointcut("execution(* (io.vavr.concurrent..* && java.lang.Runnable+).run()) && this(runnable)")
-  def futureRelatedRunnableExecution(runnable: HasContext) = {}
-
-  @Around("futureRelatedRunnableExecution(runnable)")
-  def aroundExecution(pjp: ProceedingJoinPoint, runnable: HasContext): Any = {
-    Kamon.withContext(runnable.context) {
-      pjp.proceed()
+  @Around("runFuture(executor, computation)")
+  def aroundRunFuture(pjp: ProceedingJoinPoint, executor: ExecutorService, computation: CheckedFunction0[_]): Any = {
+    val capturedContext = Kamon.currentContext()
+    val computationWithContext = new CheckedFunction0[Any] {
+      override def apply(): Any = {
+        Kamon.withContext(capturedContext)(computation.apply())
+      }
     }
+
+    pjp.proceed(Array(executor, computationWithContext))
   }
+
+//  @After("runFuture(executor, computation)")
+//  def afterCreation(runnable: HasContext): Unit = {
+//    // Force traceContext initialization.
+//    runnable.context
+//  }
+
 
 }
