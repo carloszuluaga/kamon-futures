@@ -37,7 +37,6 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
         val context = contextWithLocal("in-future-body")
         val baggageInBody: Future[Option[String]] = Kamon.withContext(context) {
           Future.of(() ⇒ {
-            println("1")
             Kamon.currentContext().get(StringKey)
           })
         }
